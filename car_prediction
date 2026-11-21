@@ -1,0 +1,107 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+
+# --- 1. Train ---
+df = pd.read_csv("car_data.csv")
+df['Car_Age'] = 2026 - df['Year']
+df['Brand'] = df['Car_Name'].str.split().str[0]
+df['Kms_per_Year'] = df['Driven_kms'] / (df['Car_Age'] + 1)
+
+X = df[['Present_Price','Driven_kms','Owner','Car_Age','Fuel_Type','Selling_type','Transmission','Brand','Kms_per_Year']]
+y = df['Selling_Price']
+
+cat = ['Fuel_Type','Selling_type','Transmission','Brand']
+
+# *** FIXED LINE HERE ***
+pre = ColumnTransformer([
+    ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), cat)
+], remainder='passthrough')
+
+model = Pipeline([('pre', pre), ('m', HistGradientBoostingRegressor(random_state=42, max_iter=300, learning_rate=0.05))])
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=42)
+model.fit(Xtr, ytr)  # Now this will work
+pred_test = model.predict(Xte)
+print(f"Model Trained! R2 = {r2_score(yte, pred_test):.3f}")
+
+rf = Pipeline([('pre', pre), ('m', RandomForestRegressor(n_estimators=200, random_state=42))])
+rf.fit(Xtr, ytr)
+
+# --- 2. Interactive Prediction ---
+def predict_car():
+    print("\nEnter Car Details:")
+    present_price = float(input("Present Price in lakhs (e.g. 6.5): "))
+    year = int(input("Year (e.g. 2018): "))
+    kms = int(input("Kms Driven (e.g. 45000): "))
+    owner = int(input("Owner - 0=1st owner, 1=2nd owner: "))
+    fuel = input("Fuel Type - Petrol / Diesel / CNG: ").strip().title()
+    selling = input("Selling Type - Dealer / Individual: ").strip().title()
+    trans = input("Transmission - Manual / Automatic: ").strip().title()
+    brand = input("Brand - Maruti / Hyundai / BMW / Honda etc: ").strip().title()
+
+    car_age = 2026 - year
+    kms_per_year = kms / (car_age + 1)
+
+    new_car = pd.DataFrame([{
+        'Present_Price': present_price, 'Driven_kms': kms, 'Owner': owner,
+        'Car_Age': car_age, 'Fuel_Type': fuel, 'Selling_type': selling,
+        'Transmission': trans, 'Brand': brand, 'Kms_per_Year': kms_per_year
+    }])
+
+    price = model.predict(new_car)[0]
+    print(f"\n>>> Predicted Selling Price: {price:.2f} lakhs ({price*100000:.0f} Rs)")
+    print("Showing all 6 graphs...")
+    return car_age, price
+
+car_age, my_price = predict_car()
+
+# --- 3. ALL 6 GRAPHS ---
+# Graph 1
+plt.figure(figsize=(10,5))
+plt.scatter(df['Car_Age'], df['Selling_Price'], alpha=0.3, color='grey', label='All Cars')
+plt.scatter([car_age], [my_price], color='red', s=400, marker='*', edgecolors='black', label='YOUR CAR')
+plt.annotate(f"Your Car: {my_price:.2f} L", (car_age, my_price), xytext=(10,10), textcoords="offset points", color='red', weight='bold')
+plt.xlabel("Car Age"); plt.ylabel("Selling Price (lakhs)")
+plt.title("1. Price Drops With Age"); plt.legend(); plt.grid(alpha=0.3); plt.show()
+
+# Graph 2
+plt.figure(figsize=(8,5))
+df.groupby('Fuel_Type')['Selling_Price'].mean().sort_values().plot(kind='barh', color=['green','orange','blue'])
+plt.axvline(my_price, color='red', linestyle='--', label=f'Your Car: {my_price:.2f} L')
+plt.xlabel("Avg Selling Price"); plt.title("2. Avg Price by Fuel Type"); plt.legend(); plt.show()
+
+# Graph 3
+plt.figure(figsize=(8,5))
+df.groupby('Transmission')['Selling_Price'].mean().plot(kind='bar', color=['skyblue','orange'])
+plt.axhline(my_price, color='red', linestyle='--', label=f'Your Car: {my_price:.2f} L')
+plt.ylabel("Avg Selling Price"); plt.title("3. Manual vs Automatic"); plt.legend(); plt.show()
+
+# Graph 4
+plt.figure(figsize=(10,5))
+df.groupby('Brand')['Selling_Price'].mean().sort_values(ascending=False).head(10).plot(kind='bar', color='teal')
+plt.axhline(my_price, color='red', linestyle='--', label=f'Your Car: {my_price:.2f} L')
+plt.ylabel("Avg Price"); plt.title("4. Top 10 Brands by Avg Price")
+plt.xticks(rotation=30); plt.legend(); plt.show()
+
+# Graph 5
+plt.figure(figsize=(7,7))
+plt.scatter(yte, pred_test, alpha=0.6)
+plt.plot([0,25],[0,25],'r--', label='Perfect Prediction')
+plt.xlabel("Actual Price"); plt.ylabel("Predicted Price")
+plt.title(f"5. Actual vs Predicted (R2={r2_score(yte, pred_test):.3f})")
+plt.legend(); plt.show()
+
+# Graph 6
+plt.figure(figsize=(9,5))
+names = rf.named_steps['pre'].get_feature_names_out()
+importances = rf.named_steps['m'].feature_importances_
+idx = np.argsort(importances)[-8:]
+plt.barh(names[idx], importances[idx], color='purple')
+plt.title("6. What Decides Price? (Feature Importance)"); plt.xlabel("Importance"); plt.show()
+
