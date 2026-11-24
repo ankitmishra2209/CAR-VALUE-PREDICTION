@@ -23,3 +23,19 @@ Jaise car kitni purani hai, kitni chali hai, kaunsi company ki hai - us hisaab s
 ```bash
 pip install pandas scikit-learn matplotlib
 python car_prediction.py
+# Car Value Prediction
+
+Used car ki price predict karta hai.
+
+## Models Compared
+
+| Model | R2 Score |
+| --- | --- |
+| Random Forest | 0.81 |
+| HistGradientBoosting | 0.93 |
+
+## Best Model
+**HistGradientBoosting** sabse best raha.
+
+## Tech Used
+Python, Pandas, Scikit-learn
