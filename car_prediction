@@ -103,4 +103,6 @@ importances = rf.named_steps['m'].feature_importances_
 idx = np.argsort(importances)[-8:]
 plt.barh(names[idx], importances[idx], color='purple')
 plt.title("6. What Decides Price? (Feature Importance)"); plt.xlabel("Importance"); plt.show()
+print("Random Forest R2:", rf_score)
+print("HistGradientBoosting R2:", hgb_score)
 
