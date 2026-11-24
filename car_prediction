@@ -103,6 +103,14 @@ importances = rf.named_steps['m'].feature_importances_
 idx = np.argsort(importances)[-8:]
 plt.barh(names[idx], importances[idx], color='purple')
 plt.title("6. What Decides Price? (Feature Importance)"); plt.xlabel("Importance"); plt.show()
-print("Random Forest R2:", rf_score)
-print("HistGradientBoosting R2:", hgb_score)
+# --- R2 Score Dono Ka ---
+from sklearn.metrics import r2_score
 
+rf_pred = rf.predict(Xte)
+hgb_pred = model.predict(Xte)
+
+rf_score = r2_score(yte, rf_pred)
+hgb_score = r2_score(yte, hgb_pred)
+
+print(f"Random Forest R2: {rf_score:.3f}")
+print(f"HistGradientBoosting R2: {hgb_score:.3f}")
