@@ -61,7 +61,6 @@ def predict_car():
 
 car_age, my_price = predict_car()
 
-# --- 3. ALL 6 GRAPHS ---
 # Graph 1
 plt.figure(figsize=(10,5))
 plt.scatter(df['Car_Age'], df['Selling_Price'], alpha=0.3, color='grey', label='All Cars')
